@@ -1,0 +1,9 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+  - name: Check SELINUX status
+    command: getenforce
+    async: 0
+    poll: 0
+    ignore_errors: true
