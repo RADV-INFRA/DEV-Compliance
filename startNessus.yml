@@ -1,7 +1,0 @@
----
-- hosts: all
-  become: yes
-  tasks:
-  - name: Start Nessus Agents
-    command: /bin/systemctl start nessusagent.service
-    ignore_errors: true
