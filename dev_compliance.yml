@@ -1,0 +1,196 @@
+---
+- hosts: spe
+  become: yes
+  tasks:
+  - name: Install Packages
+    yum:
+      name: "{{ packages }}"
+    vars:
+      packages:
+      - screen
+      - aide
+      - audit
+  - name: push auditd.conf
+    copy:
+      src: ~nwt/dev/etc/audit/auditd.conf
+      dest: /etc/audit/auditd.conf
+      mode: 0640
+  - name: push audit.conf
+    copy:
+      src: ~nwt/dev/etc/audit/audit.conf
+      dest: /etc/audit/audit.conf
+      mode: 0640
+  - name: push audit.rules
+    copy:
+      src: ~nwt/dev/etc/audit/audit.rules
+      dest: /etc/audit/audit.rules
+      mode: 0600
+  - name: push another audit.rules
+    copy:
+      src: ~nwt/dev/etc/audit/rules.d/audit.rules
+      dest: /etc/audit/rules.d/audit.rules
+      mode: 0600
+  - name: restart auditd
+    command: service auditd restart
+  - cron:
+      name: cron job aide
+      weekday: 1-5
+      hour: 17
+      minute: 0
+      job: '/usr/sbin/aide --check | /bin/mail -s "aide integrity check run for <system name>" root@sysname.mil'
+  - name: push audisp.conf
+    copy:
+      src: ~nwt/dev/etc/audisp/audisp-remote.conf
+      dest: /etc/audisp/audisp-remote.conf
+      mode: 0640
+  - name: push pam.d passwd
+    copy:
+      src: ~nwt/dev/etc/pam.d/passwd
+      dest: /etc/pam.d/passwd
+      mode: 0644
+  - name: push pw security
+    copy:
+      src: ~nwt/dev/etc/security/pwquality.conf
+      dest: /etc/security/pwquality.conf
+      mode: 0644
+  - name: push login banner
+    copy:
+      src: ~nwt/dev/etc/issue
+      dest: /etc/issue
+      mode: 0644
+  - name: push system-auth-ac
+    copy:
+      src: ~nwt/dev/etc/pam.d/system-auth-ac
+      dest: /etc/pam.d/system-auth-ac
+      mode: 0644
+  - name: push password-auth-ac
+    copy:
+      src: ~nwt/dev/etc/pam.d/password-auth-ac
+      dest: /etc/pam.d/password-auth-ac
+      mode: 0644
+  - name: push login.defs
+    copy:
+      src: ~nwt/dev/etc/login.defs
+      dest: /etc/login.defs
+      mode: 0644
+  - name: push sshd_config
+    copy:
+      src: ~nwt/dev/etc/ssh/sshd_config
+      dest: /etc/ssh/sshd_config
+      mode: 0600
+  - name: pam sshd
+    copy:
+      src: ~nwt/dev/etc/pam.d/sshd
+      dest: /etc/pam.d/sshd
+      mode: 0644
+  - name: set /etc/ssh/ssh_host_ed25519_key
+    file: 
+      path: /etc/ssh/ssh_host_ed25519_key
+      mode: 0600
+  - name: set /etc/ssh/ssh_host_ecdsa_key
+    file:
+      path: /etc/ssh/ssh_host_ecdsa_key
+      mode: 0600
+  - name: restart sshd
+    command: systemctl restart sshd
+  - name: push useradd
+    copy:
+      src: ~nwt/dev/etc/default/useradd
+      dest: /etc/default/useradd
+      mode: 0644
+  - name: push yum.conf
+    copy:
+      src: ~nwt/dev/etc/yum.conf
+      dest: /etc/yum.conf
+      mode: 0644 
+  - name: push blacklist.conf
+    copy:
+      src: ~nwt/dev/etc/modprobe.d/blacklist.conf
+      dest: /etc/modprobe.d/blacklist.conf
+      mode: 0644
+  - name: push nodccp
+    copy:
+      src: ~nwt/dev/etc/modprobe.d/nodccp
+      dest: /etc/modprobe.d/nodccp
+      mode: 0644
+  - name: push selinux config
+    copy:
+      src: ~nwt/dev/etc/selinux/config
+      dest: /etc/selinux/config
+      mode: 0644
+  - name: push limits.conf
+    copy:
+      src: ~nwt/dev/etc/security/limits.conf
+      dest: /etc/security/limits.conf
+      mode: 0644
+  - name: push profile
+    copy:
+      src: ~nwt/dev/etc/profile
+      dest: /etc/profile
+      mode: 0644
+  - name: push sysctl.conf
+    copy:
+      src: ~nwt/dev/etc/sysctl.conf
+      dest: /etc/sysctl.conf
+      mode: 0644
+  - name: enable sysctl settings
+    command: sysctl -p
+  - name: push postlogin-ac
+    copy:
+      src: ~nwt/dev/etc/pam.d/postlogin-ac
+      dest: /etc/pam.d/postlogin-ac
+      mode: 0644
+ # - name: push resolv.conf
+ #   copy:
+ #     src: ~nwt/dev/etc/resolv.conf
+ #     dest: /etc/resolv.conf
+ #     mode: 0644
+  - name: set resolv mode
+    command: chattr +i /etc/resolv.conf
+  - name: account compliance
+    command: chage -m 60 nwt 
+  - name: interactive user mode
+    command: chmod 0750 /home/nwt
+  - name: group indentifier
+    command: chgrp nwt /etc/passwd
+  - name: change local interative user group
+    command: sudo chgrp nwt /home/nwt /var/opt/microsoft/omsagent
+  - name: changing mode of file
+    file:
+      path: /home/nwt/.bash_logout
+      mode: 0740
+  - name: updating rsyslog conf file
+    lineinfile:
+      path: /etc/rsyslog.conf
+      line: 'cron.* /var/log/cron.log'
+  - name: reset file permissions - RHEL-07-010010
+    shell: rpm --setperms splunkforwarder-7.0.0-c8a78efdd40f.x86_64
+  - name: reset file permissions - RHEL-07-010010
+    shell: rpm --setugids splunkforwarder-7.0.0-c8a78efdd40f.x86_64
+  - name: reset user & group ownership - RHEL-07-010010
+    shell: rpm --setugids splunkforwarder-7.0.0-c8a78efdd40f.x86_64
+  - name: non-compliant account - RHEL-07-010240
+    shell: chage -m 1 splunk
+  - name: enforce nwt account - RHEL-07-010260
+    shell: chage -m 60 nwt
+  - name: enforce splunk account - RHEL-07-010260
+    shell: chage -m 60 splunk
+  - cron:
+      name: cron job aide - RHEL-07-020030
+      weekday: 1-5
+      hour: 17
+      minute: 0
+      job: '/usr/sbin/aide --check | /bin/mail -s "$HOSTNAME - Daily aide integrity check run" root@sysname.mil'
+  - name: change interact  user - RHEL-07-020650
+    shell: chgrp users /home/nwt
+  - name: change interactobe user - RHEL-07-020670
+    shell: chgrp users /home/nwt /var/opt/microsoft/omsagent/cc346c2f-213d-472c-84c2-e537576fb034/run
+  - name: restart tmp.mount
+    service:
+      name: tmp.mount
+      state: started
+      enabled: yes
+#  - name: install dracut
+#    yum:
+#      name: dracut-fips 
+#      state: installed 

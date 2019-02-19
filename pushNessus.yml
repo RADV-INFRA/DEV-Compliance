@@ -1,0 +1,9 @@
+---
+- hosts: all
+  become: yes
+  tasks:
+  - name: push Nessus Agent
+    copy:
+      src: ~nwt/NessusAgent-7.1.0-es7.x86_64.rpm
+      dest: /root/NessusAgent-7.1.0-es7.x86_64.rpm
+      mode: 0755
