@@ -1,7 +1,13 @@
 ---
-- hosts: spe
+- hosts: dev
   become: yes
   tasks:
+  - name: remove azure client package
+    command: yum remove AzureClient.rpm -y
+ 
+  - name: mv old repo
+    command: mv /etc/yum.repos.d/rh-cloud.repo /home/nwt
+
   - name: Install Packages
     yum:
       name: "{{ packages }}"
@@ -10,6 +16,12 @@
       - screen
       - aide
       - audit
+      - firewalld
+      - esc 
+      - pam_pkcs11
+      - authconfig-gtk
+  - name: restart firewalld
+    shell: systemctl restart firewalld
   - name: push auditd.conf
     copy:
       src: ~nwt/dev/etc/audit/auditd.conf
@@ -38,6 +50,12 @@
       hour: 17
       minute: 0
       job: '/usr/sbin/aide --check | /bin/mail -s "aide integrity check run for <system name>" root@sysname.mil'
+  - cron:
+      name: cron job aide
+      weekday: 1-5
+      hour: 17
+      minute: 0
+      job: '/usr/sbin/aide --check | /bin/mail -s "$HOSTNAME - Daily aide integrity check run" root@sysname.mil'
   - name: push audisp.conf
     copy:
       src: ~nwt/dev/etc/audisp/audisp-remote.conf
@@ -118,11 +136,11 @@
       src: ~nwt/dev/etc/selinux/config
       dest: /etc/selinux/config
       mode: 0644
-  - name: push limits.conf
-    copy:
-      src: ~nwt/dev/etc/security/limits.conf
-      dest: /etc/security/limits.conf
-      mode: 0644
+#  - name: push limits.conf
+#    copy:
+#      src: ~nwt/dev/etc/security/limits.conf
+#      dest: /etc/security/limits.conf
+#      mode: 0644
   - name: push profile
     copy:
       src: ~nwt/dev/etc/profile
@@ -140,11 +158,11 @@
       src: ~nwt/dev/etc/pam.d/postlogin-ac
       dest: /etc/pam.d/postlogin-ac
       mode: 0644
- # - name: push resolv.conf
- #   copy:
- #     src: ~nwt/dev/etc/resolv.conf
- #     dest: /etc/resolv.conf
- #     mode: 0644
+  - name: push resolv.conf
+    copy:
+      src: ~nwt/dev/etc/resolv.conf
+      dest: /etc/resolv.conf
+      mode: 0644
   - name: set resolv mode
     command: chattr +i /etc/resolv.conf
   - name: account compliance
@@ -153,8 +171,6 @@
     command: chmod 0750 /home/nwt
   - name: group indentifier
     command: chgrp nwt /etc/passwd
-  - name: change local interative user group
-    command: sudo chgrp nwt /home/nwt /var/opt/microsoft/omsagent
   - name: changing mode of file
     file:
       path: /home/nwt/.bash_logout
@@ -163,34 +179,154 @@
     lineinfile:
       path: /etc/rsyslog.conf
       line: 'cron.* /var/log/cron.log'
-  - name: reset file permissions - RHEL-07-010010
-    shell: rpm --setperms splunkforwarder-7.0.0-c8a78efdd40f.x86_64
-  - name: reset file permissions - RHEL-07-010010
-    shell: rpm --setugids splunkforwarder-7.0.0-c8a78efdd40f.x86_64
-  - name: reset user & group ownership - RHEL-07-010010
-    shell: rpm --setugids splunkforwarder-7.0.0-c8a78efdd40f.x86_64
-  - name: non-compliant account - RHEL-07-010240
-    shell: chage -m 1 splunk
-  - name: enforce nwt account - RHEL-07-010260
-    shell: chage -m 60 nwt
-  - name: enforce splunk account - RHEL-07-010260
-    shell: chage -m 60 splunk
+  - name: enforce nwt account
+    shell: chage -m 1 nwt
   - cron:
-      name: cron job aide - RHEL-07-020030
+      name: cron job aide 
+      weekday: 1-5
+      hour: 17
+      minute: 0
+      job: '/usr/sbin/aide --check | /bin/mail -s "$HOSTNAME - Daily aide integrity check run" root@sysname.mil'
+  - name: enforce jenkins account
+    shell: chage -m 1 nwt
+  - cron:
+      name: cron job aide 
       weekday: 1-5
       hour: 17
       minute: 0
       job: '/usr/sbin/aide --check | /bin/mail -s "$HOSTNAME - Daily aide integrity check run" root@sysname.mil'
   - name: change interact  user - RHEL-07-020650
     shell: chgrp users /home/nwt
-  - name: change interactobe user - RHEL-07-020670
-    shell: chgrp users /home/nwt /var/opt/microsoft/omsagent/cc346c2f-213d-472c-84c2-e537576fb034/run
   - name: restart tmp.mount
     service:
       name: tmp.mount
       state: started
       enabled: yes
-#  - name: install dracut
-#    yum:
-#      name: dracut-fips 
-#      state: installed 
+  - name: install dracut
+    yum:
+      name: dracut-fips 
+      state: installed 
+  - name: rate limiting
+    lineinfile:
+      path: /etc/sysctl.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'net.ipv4.tcp_invalid_ratelimit = 500'
+  - name: effect
+    command: sysctl --system
+  - name: dns resolution
+    command: echo -n > /etc/resolv.conf
+  - name: kernel parameters
+    lineinfile:
+      path: /etc/sysctl.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'net.ipv4.conf.all.accept_source_route = 0'
+  - name: effect
+    command: sysctl --system
+  - name: system kernel parameters
+    lineinfile:
+      path: /etc/sysctl.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'net.ipv4.conf.default.accept_source_route = 0'
+  - name: effect
+    command: sysctl --system
+  - name: install multiple pkgs
+    yum: name={{ item }} state=present
+    with_items:
+          - esc 
+          - pam_pkcs11
+          - authconfig-gtk
+          - pam_pkcs11 
+#  - name: modify sssd config
+#    lineinfile:
+#      path: /etc/sssd/sssd.conf
+#      state: present
+#      line: '{{ item }}'
+#    with_items:
+#      - 'ldap_id_use_start_tls = true'
+#      - 'ldap_tls_reqcert = demand'
+#      - 'ldap_tls_cacert = /etc/pki/tls/certs/ca-bundle.crt'
+  - name: modify resolv config file - RHEL-07-040600 
+    command: "{{item}}"  
+    with_items:
+      - echo -n > /etc/resolv.conf
+      - chattr +i /etc/resolv.conf
+  - name: edit systemctl config
+    lineinfile:
+      path: /etc/sysctl.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'net.ipv4.icmp_echo_ignore_broadcasts = 1'
+      - 'net.ipv4.ip_forward = 0'
+      - 'net.ipv6.conf.all.accept_source_route = 0'
+  - name: run sysctl command
+    shell: sysctl --system
+  
+#  - name: modify cert policy
+#    lineinfile:
+#      path: /etc/pam_pkcs11/pam_pkcs11.conf
+#      state: present
+#      line: '{{ item }}'
+#    with_items:
+#      - 'ocsp_on'
+  - name: edit rsyslog
+    lineinfile: 
+      path: /etc/rsyslog.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'rsyslog' 
+#  - name: edit ntp file
+#    lineinfile:
+#      path: /etc/ntp.conf
+#      state: present
+#      line: '{{ item }}'
+#    with_items:
+#      - 'maxpoll 10'
+  - name: change user group
+    shell: chgrp nwt /home/nwt
+  - name: edit auditsp file
+    lineinfile:
+      path:  /etc/audisp/audispd.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'overflow_action = syslog'
+      - 'name_format = hostname'
+      - 'enable_krb5 = yes'
+      - 'disk_full_action = single'
+      - 'network_failure_action = syslog'
+      - 'space_left_action = email'
+#  - name: set nessus file permission
+#    command: rpm --setugids /opt/nessus_agent/var/nessus/tmp
+#  - name: set nessus file
+#    command: rpm --setperms /opt/nessus_agent/var/nessus/tmp
+#  - name: push security limit conf
+#    copy:
+#      src: /tmp/limits.conf
+#      dest: /etc/security/limits.conf
+#      mode: 0640    
+#  - name: copy auth file
+#    copy:
+#      src:  /tmp/system-auth
+#      dest: /etc/pam.d/system-auth
+#      mode: 0640
+  - name: restarted auditd service
+    command: service auditd restart
+  - name: edit useradd default file
+    lineinfile:
+      path:  /etc/default/useradd
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'INACTIVE=0'
+  - name: reset file permission
+    command: chmod 600 /var/db/sudo/nwt
+
+  

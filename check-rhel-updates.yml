@@ -1,0 +1,6 @@
+---
+- hosts: vaprod-mysql
+  tasks:
+  - name: checking updates on prod servers
+    yum: list=updates update_cache=true
+    register: yumoutput

@@ -1,4 +1,4 @@
-#Start MySQL service 
+#Backup RADV Database priror to deployment from Jenkins build jobs
 #Author: Seema Gupta
 #Project: RADV
 #Create Date - 12/03/2018
@@ -11,6 +11,7 @@ PORT=3306
 DATA_DIRECTORY=/data
 STATE_FILE=$DATA_DIRECTORY/grastate.dat
 COMMAND="systemctl start mysql@bootstrap"
+FILE=
 
 
 if (( $(netstat -ntaupe | grep LISTEN | grep $PORT | wc -l) > 0 ))

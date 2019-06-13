@@ -3,4 +3,4 @@
   become: yes
   tasks:
   - name: Check splunk connectivity to all ivv server
-    command: tail -f /opt/splunkforwarder/var/log/splunk/splunkd.log
+    shell: tail -f /opt/splunkforwarder/var/log/splunk/splunkd.log

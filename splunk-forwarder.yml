@@ -1,0 +1,75 @@
+---
+- hosts: test
+  become: true
+  gather_facts: no
+  remote_user: nwt
+  tasks:
+#  - name: stop the forwarder service
+#    command: /opt/splunk/bin/splunk stop
+
+#  - name: remove the package
+#    command: rpm -e /home/nwt/splunkforwarder-7.0.0-c8a78efdd40f-linux-2.6-x86_64.rpm
+
+#  - name: remove the install folder
+#    file:
+#      path: /opt/splunkforwarder
+#      state: absent
+#      recurse: yes
+
+  - name: Download the Splunk Universal Forwarder RPM
+    get_url:
+      url: https://www.splunk.com/page/download_track?file=7.1.1/linux/splunkforwarder-7.1.1-8f0ead9ec3db-linux-2.6-x86_64.rpm&ac=&wget=true&name=wget&platform=Linux&architecture=x86_64&version=7.1.1&product=universalforwarder&typed=release
+      dest: /tmp/splunkforwarder-7.1.1-8f0ead9ec3db-linux-2.6-x86_64.rpm
+
+  - name: Install Splunk package
+    yum:
+      name: /tmp/splunkforwarder-7.1.1-8f0ead9ec3db-linux-2.6-x86_64.rpm
+      state: present
+
+  - name: start splunk 
+    command: /opt/splunkforwarder/bin/splunk start --answer-yes --no-prompt --accept-license
+    become_user: splunk
+#    become_method: su
+    become: true
+
+  - name: enable boot start
+    command: /opt/splunkforwarder/bin/splunk enable boot-start -user splunk
+
+  - name: change ownership of the splunk binaries to splunk
+    file:
+      path: /opt/splunkforwarder
+      state: directory
+      owner: splunk
+      group: splunk
+      recurse: yes
+
+  - name: removing the etc init.d splunk file
+    file:
+      path: /etc/init.d/splunk
+      state: absent
+
+  - name: creating the etc init.d splunk file
+    copy:
+      src: splunk
+      dest: /etc/init.d/splunk
+      force: yes
+
+  - name: making entries in deploymentclient conf
+    copy:
+      src: deploymentclient.conf
+      dest: /opt/splunkforwarder/etc/system/local/deploymentclient.conf
+      force: yes
+#    lineinfile:
+#      path: /opt/splunkforwarder/etc/system/local/deploymentclient.conf
+#      state: present
+#      line: "{{ item.line }}"
+    become_user: splunk
+#    become_method: su
+    become: true
+#    with_items:
+#      - '[deployment-client]'
+#      - 'clientName = newwave'
+#      - '[target-broker:deploymentServer]'
+#      - 'targetUri = 10.0.0.20:8089'
+  - name: restart splunk as splunk user
+    shell: /opt/splunkforwarder/bin/splunk restart

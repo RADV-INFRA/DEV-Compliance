@@ -1,5 +1,0 @@
-- hosts: test
-  tasks:
-  - name: Execute Splunk forwarder install script
-    script: /home/nwt/splunk.sh       
-

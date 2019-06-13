@@ -1,0 +1,6 @@
+---
+- hosts: dev
+  tasks:
+  - name: Snmp check
+    shell: systemctl status snmpd
+

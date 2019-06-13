@@ -1,0 +1,21 @@
+
+
+---
+- hosts: localhost 
+  tasks:    
+#    - debug:
+#        var: ansible_date_time.date
+    - debug:
+        msg: "{{ lookup('pipe','date') }}"
+
+- hosts: all-mysql
+  vars:
+    mysql_user: root
+    mysql_password:
+  tasks:
+  - name: Check MySQL account password last set date
+    command: mysql -u ansible -pHmnqMk67##rPRmHnbVg mysql -Ns -e "select user,host from mysql.user where datediff(current_date,date(password_last_changed)) > 85 and account_locked='N'"
+    register: user
+
+  - debug: msg="{{ user.stdout_lines }}"
+

@@ -1,0 +1,10 @@
+---
+- hosts: dev
+  become: true
+  gather_facts: no
+  remote_user: nwt
+  tasks:
+  - name: Checking Nessus Agent Installation
+    shell: systemctl status nessusagent.service
+
+

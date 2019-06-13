@@ -1,0 +1,31 @@
+#
+  
+RETVAL=0
+USER=splunk
+ 
+. /etc/init.d/functions
+ 
+splunk_start() {
+  echo Starting Splunk...
+  su - ${USER} -c '"$SPLUNK_HOME/bin/splunk" start --no-prompt --answer-yes'
+  RETVAL=$?
+  [ $RETVAL -eq 0 ] && touch /var/lock/subsys/splunk
+}
+splunk_stop() {
+  echo Stopping Splunk...
+  su - ${USER} -c '"$SPLUNK_HOME/bin/splunk" stop'
+  RETVAL=$?
+  [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/splunk
+}
+splunk_restart() {
+  echo Restarting Splunk...
+  su - ${USER} -c '"$SPLUNK_HOME/bin/splunk" restart'
+  RETVAL=$?
+  [ $RETVAL -eq 0 ] && touch /var/lock/subsys/splunk
+}
+splunk_status() {
+  echo Splunk status:
+  su - ${USER} -c '"$SPLUNK_HOME/bin/splunk" status'
+  RETVAL=$?
+}
+case "$1" in

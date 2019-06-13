@@ -1,0 +1,16 @@
+---
+- hosts: qa
+  become: true
+  remote_user: nwt
+  tasks:
+  - name: Copy Nessus package
+    copy:
+      src: /home/nwt/apps/NessusAgent-7.1.0-es7.x86_64.rpm
+      dest: /home/nwt
+      mode: u+rwx,g-r,o-r
+  - name: Installation of Nessus agent
+    shell: rpm -Uvh /home/nwt/NessusAgent-7.1.0-es7.x86_64.rpm
+
+  - name: Start Nessus service
+    shell: systemctl start  nessusagent
+ 

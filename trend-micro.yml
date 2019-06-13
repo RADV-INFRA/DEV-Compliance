@@ -1,0 +1,13 @@
+---
+- hosts: dev-trend-micro
+  become: true
+  remote_user: nwt
+  tasks:
+  - name: copy trend micro package
+    copy:
+      src: /home/nwt/Agent-Core-RedHat_EL7-11.3.0-235.x86_64.rpm
+      dest: /home/nwt/
+      force: yes
+  - name: install trend micro package
+    command: rpm -ivh  /home/nwt/Agent-Core-RedHat_EL7-11.3.0-235.x86_64.rpm 
+  

@@ -1,0 +1,40 @@
+---
+- hosts: snmp
+  become_user: yes
+  tasks:
+  - name: stop firewalld
+    service:
+      name: firewalld
+      state: stopped
+  - name: Disable firewalld
+    service:
+      name: firewalld
+      enabled: no
+  - name: Install package
+    shell: yum install net-snmp -y
+ #   yum:
+ #     name: net-snmp
+ #     state: latest
+  - name: Enable snmpd
+    service:
+      name: snmpd
+      enabled: yes
+  - name: configure snmp
+    lineinfile:
+      path: /etc/snmp/snmpd.conf
+      state: present
+      line: '{{ item }}'
+    with_items:
+      - 'view all included .1'
+      - 'access notConfigGroup "" any noauth exact all none none'
+      - 'smuxpeer .1.3.6.1.4.1.674.10892.1'
+      - 'trapsink  community-string'
+  - name: restart snmpd service
+    service:
+      name: snmpd
+      state: restarted
+  - name: Enable snmpd
+    service:
+      name: snmpd
+      enabled: yes
+

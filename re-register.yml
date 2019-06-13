@@ -1,0 +1,40 @@
+---
+- hosts: test
+  tasks:
+  - name: Remove client from satellite
+    shell: mv  /etc/yum.repos.d/rh-cloud.repo /root
+  - name: clean satellite reisteration
+    shell: subscription-manager clean
+  - name: remove old registeration
+    shell: subscription-manager remove --all
+  - name: unregister from satellite
+    shell: subscription-manager unregister
+  - name: erase katello package
+    command: rpm -e katello-ca-consumer-sat.cms.radvcdat.com
+  - name: mv rh-cloud repo
+    shell: mv /etc/yum.repos.d/rh-cloud.repo /root
+  - name: register server to satellite
+    shell: subscription-manager register --org="RADV" --activationkey="DEV"
+  - name: enable rhel 7 repo
+    shell: subscription-manager repos --enable=rhel-7-server-satellite-tools-6.4-rpms
+  - name: install katello agent  & puppet package
+    yum: name={{item}} state=present
+    with_items:
+          - katello-agent
+          - puppet
+  - name: start goferd service
+    service:
+       name: goferd
+       state: started
+  - name: start puppet service
+    service:
+       name: puppet
+       state: started
+  - name: run puppet catalog
+    shell: puppet agent -t --server sat.cms.radvcdat.com
+#  - name: update linux server
+#    yum:
+#      name: '*'
+#      state: latest
+
+  

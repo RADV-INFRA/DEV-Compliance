@@ -7,7 +7,7 @@
     ansible_winrm_server_cert_validation: ignore
     ansible_winrm_transport: kerberos
   vars_files:
-    - justin.vault
+    - justin_qa.vault
   tasks:
     - name: Ping Windows VMs
       win_ping:
